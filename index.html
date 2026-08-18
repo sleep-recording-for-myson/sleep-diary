@@ -85,7 +85,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 </section>
 
 <script>
-const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV24",OLD_STORAGE_KEY="sleepDiaryV23",OLDER_STORAGE_KEY="sleepDiaryV22",OLDEST_STORAGE_KEY="sleepDiaryV21",LEGACY_STORAGE_KEY="sleepDiaryV2",LEGACY1_STORAGE_KEY="sleepDiaryV1";
+const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV26",OLD_STORAGE_KEY="sleepDiaryV23",OLDER_STORAGE_KEY="sleepDiaryV22",OLDEST_STORAGE_KEY="sleepDiaryV21",LEGACY_STORAGE_KEY="sleepDiaryV2",LEGACY1_STORAGE_KEY="sleepDiaryV1";
 const $=id=>document.getElementById(id);
 
 function fillTimes(select,orderStartHour=0,defaultValue="00:00"){
@@ -303,22 +303,55 @@ function resetAfterSave(){
 }
 
 $("saveBtn").addEventListener("click",async()=>{
-  $("status").className="status";$("status").textContent="保存しています…";
+  $("status").className="status";
+  $("status").textContent="保存しています…";
+
+  // 保存ボタンを押した瞬間の入力値を固定する
+  const selectedDate=$("date").value;
+  const selectedSleep=$("sleepTime").value;
+  const selectedWake=$("wakeTime").value;
+  const selectedMidwake=getRadio("midwake");
+  const selectedMidwakeTime=$("midYes").checked?$("midwakeTime").value:"";
+  const selectedResleepTime=$("midYes").checked?$("resleepTime").value:"";
+  const selectedHeadache=getRadio("headache");
+  const selectedMedicine=selectedHeadache==="あり"?getRadio("medicine"):"なし";
+  const selectedMedicineTime=selectedMedicine==="あり"?$("medicineTime").value:"";
+  const selectedDuration=calcDuration();
+
   let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:"",weatherSource:""};
   try{
-    wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
-    const prefix=wx.weatherSource.startsWith("過去") ? "過去天気" : "現在";
+    wx=await fetchWeatherForEntry(selectedDate,selectedWake);
+    const prefix=wx.weatherSource==="過去" ? "過去天気" : "現在";
     $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
   }catch(e){
     $("weather").textContent=`天気情報を取得できませんでした（${e.message}）`;
   }
-  const headache=getRadio("headache"),medicine=headache==="あり"?getRadio("medicine"):"なし";
-  const entry={id:Date.now(),date:$("date").value,sleepTime:$("sleepTime").value,wakeTime:$("wakeTime").value,durationMinutes:calcDuration(),
-    midwake:getRadio("midwake"),midwakeTime:$("midYes").checked?$("midwakeTime").value:"",resleepTime:$("midYes").checked?$("resleepTime").value:"",
-    headache,medicine,medicineTime:medicine==="あり"?$("medicineTime").value:"",...wx};
-  const list=loadEntries(),i=list.findIndex(x=>x.date===entry.date);if(i>=0)list[i]=entry;else list.push(entry);
-  list.sort((a,b)=>b.date.localeCompare(a.date));saveEntries(list);renderEntries();
-  const savedDate=entry.date;resetAfterSave();$("status").className="status saved";$("status").textContent=`${savedDate} の記録を保存しました。入力欄をリセットしました。`;
+
+  const entry={
+    id:Date.now(),
+    date:selectedDate,
+    sleepTime:selectedSleep,
+    wakeTime:selectedWake,
+    durationMinutes:selectedDuration,
+    midwake:selectedMidwake,
+    midwakeTime:selectedMidwakeTime,
+    resleepTime:selectedResleepTime,
+    headache:selectedHeadache,
+    medicine:selectedMedicine,
+    medicineTime:selectedMedicineTime,
+    ...wx
+  };
+
+  const list=loadEntries();
+  const i=list.findIndex(x=>x.date===entry.date);
+  if(i>=0)list[i]=entry;else list.push(entry);
+  list.sort((a,b)=>b.date.localeCompare(a.date));
+  saveEntries(list);
+  renderEntries();
+
+  resetAfterSave();
+  $("status").className="status saved";
+  $("status").textContent=`${selectedDate} の記録を保存しました。入力欄をリセットしました。`;
 });
 
 function fmt(m){return`${Math.floor(m/60)}時間${m%60}分`}
@@ -330,7 +363,7 @@ function renderEntries(){
     const mid=e.midwake==="あり"?` ／ 途中覚醒 ${e.midwakeTime||""}→${e.resleepTime||""}`:" ／ 途中覚醒なし";
     d.innerHTML=`<div class="entry-top"><div><div class="entry-main">${e.date}　${e.sleepTime} → ${e.wakeTime}　${fmt(e.durationMinutes)}</div>
     <div class="entry-sub">${mid} ／ 頭痛: ${e.headache}${e.medicine==="あり"?` ／ 頭痛薬: ${e.medicineTime}`:""}
-    <br>${e.weather||""}${e.temperature!==""?`　${e.temperature}℃`:""}${e.pressure!==""?`　${e.pressure} hPa`:""}</div></div>
+    <br>${e.weather||""}${e.temperature!==""?`　${e.temperature}℃`:""}${e.pressure!==""?`　${e.pressure} hPa`:""}${e.weatherTime?`<br>天気データ時刻: ${e.weatherTime}`:""}</div></div>
     <button class="danger" data-id="${e.id}">削除</button></div>`;$("entries").appendChild(d);
   });
   document.querySelectorAll(".danger").forEach(b=>b.addEventListener("click",()=>{saveEntries(loadEntries().filter(e=>e.id!==Number(b.dataset.id)));renderEntries();}));
