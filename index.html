@@ -33,7 +33,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 <div class="row"><label for="date">日付</label><input id="date" type="date"></div>
 <div class="row"><label for="sleepTime">寝た時間</label><select id="sleepTime"></select></div>
 <div class="row"><label for="wakeTime">起きた時間</label><select id="wakeTime"></select></div>
-<div class="row"><span>睡眠時間</span><span id="duration" class="duration">—</span></div>
+<div class="row"><span>実睡眠時間</span><span id="duration" class="duration">—</span></div>
 </div>
 
 <div class="card">
@@ -85,7 +85,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 </section>
 
 <script>
-const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV2",OLD_STORAGE_KEY="sleepDiaryV1";
+const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV21",OLD_STORAGE_KEY="sleepDiaryV2",OLDER_STORAGE_KEY="sleepDiaryV1";
 const $=id=>document.getElementById(id);
 
 function fillTimes(select,orderStartHour=0,defaultValue="00:00"){
@@ -106,17 +106,39 @@ fillTimes($("medicineTime"),0,"10:00");
 const now=new Date();
 $("date").value=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
 
+function toMinutes(v){
+  const [h,m]=v.split(":").map(Number);
+  return h*60+m;
+}
+
 function calcDuration(){
-  const s=$("sleepTime").value.split(":").map(Number),w=$("wakeTime").value.split(":").map(Number);
-  let a=s[0]*60+s[1],b=w[0]*60+w[1];if(b<=a)b+=1440;
-  let mins=b-a;
+  const start=toMinutes($("sleepTime").value);
+  let end=toMinutes($("wakeTime").value);
+  if(end<=start) end+=1440;
+
+  const total=end-start;
+  let awake=0;
+
   if($("midYes").checked){
-    const mw=$("midwakeTime").value.split(":").map(Number),rs=$("resleepTime").value.split(":").map(Number);
-    let m1=mw[0]*60+mw[1],m2=rs[0]*60+rs[1];
-    if(m1<a)m1+=1440;if(m2<a)m2+=1440;if(m2<m1)m2+=1440;
-    mins=Math.max(0,mins-Math.max(0,m2-m1));
+    let awakeStart=toMinutes($("midwakeTime").value);
+    let asleepAgain=toMinutes($("resleepTime").value);
+
+    // 就寝後の時刻として翌日に補正
+    if(awakeStart<start) awakeStart+=1440;
+    if(asleepAgain<start) asleepAgain+=1440;
+    if(asleepAgain<awakeStart) asleepAgain+=1440;
+
+    // 就寝〜起床の範囲内だけを途中覚醒として差し引く
+    const clippedStart=Math.max(start,awakeStart);
+    const clippedEnd=Math.min(end,asleepAgain);
+    awake=Math.max(0,clippedEnd-clippedStart);
   }
-  $("duration").textContent=`${Math.floor(mins/60)}時間${mins%60}分`;return mins;
+
+  const actual=Math.max(0,total-awake);
+  $("duration").textContent =
+    `${Math.floor(actual/60)}時間${actual%60}分` +
+    (awake>0 ? `（途中覚醒 ${awake}分を除く）` : "");
+  return actual;
 }
 ["sleepTime","wakeTime","midwakeTime","resleepTime"].forEach(id=>$(id).addEventListener("change",calcDuration));
 document.querySelectorAll('input[name="midwake"]').forEach(el=>el.addEventListener("change",()=>{$("midwakeDetail").classList.toggle("hidden",!$("midYes").checked);calcDuration();}));
@@ -154,6 +176,9 @@ function migrateOldData(){
 
   let oldEntries=[];
   try{ oldEntries=JSON.parse(localStorage.getItem(OLD_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
+  if(!Array.isArray(oldEntries) || !oldEntries.length){
+    try{ oldEntries=JSON.parse(localStorage.getItem(OLDER_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
+  }
   if(!Array.isArray(oldEntries) || !oldEntries.length) return;
 
   const migrated=oldEntries.map(e=>({
