@@ -9,151 +9,138 @@
 <link rel="icon" type="image/png" href="sleep-icon.png">
 <title>睡眠日記</title>
 <style>
-  :root { font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif; color:#171717; background:#f6f6f7; }
-  * { box-sizing:border-box; }
-  body { margin:0; padding:16px; max-width:680px; margin-inline:auto; }
-  h1 { font-size:28px; margin:8px 0 18px; }
-  h2 { font-size:18px; margin:0 0 14px; }
-  .card { background:#fff; border-radius:18px; padding:18px; margin:0 0 14px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
-  .row { display:grid; grid-template-columns:1fr 145px; align-items:center; gap:12px; padding:9px 0; }
-  input[type="date"], select { width:100%; font-size:17px; padding:10px 12px; border:1px solid #d6d6d8; border-radius:12px; background:#fff; }
-  .seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-  .seg input { display:none; }
-  .seg label { text-align:center; padding:11px 8px; border:1px solid #d6d6d8; border-radius:12px; background:#fff; }
-  .seg input:checked + label { background:#1f2937; color:#fff; border-color:#1f2937; }
-  .muted { color:#707070; font-size:13px; line-height:1.5; }
-  .weather { font-size:16px; line-height:1.7; }
-  .duration { font-weight:700; }
-  button { width:100%; border:0; border-radius:14px; padding:14px 16px; font-size:17px; font-weight:700; }
-  .primary { background:#111827; color:white; margin-top:6px; }
-  .secondary { background:#e9eaec; color:#111827; margin-top:10px; }
-  .danger { background:#fff0f0; color:#9b1c1c; width:auto; padding:8px 10px; font-size:13px; }
-  .entry { border-top:1px solid #ececef; padding:13px 0; }
-  .entry:first-child { border-top:0; }
-  .entry-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
-  .entry-main { font-weight:700; }
-  .entry-sub { margin-top:5px; color:#5c5c60; font-size:14px; line-height:1.55; }
-  .hidden { display:none; }
-  .status { margin-top:10px; font-size:14px; min-height:20px; }
-  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-  .tabs button { background:#e9eaec; color:#111; }
-  .tabs button.active { background:#111827; color:white; }
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;color:#171717;background:#f6f6f7}
+*{box-sizing:border-box}body{margin:0;padding:16px;max-width:680px;margin-inline:auto}h1{font-size:28px;margin:8px 0 18px}h2{font-size:18px;margin:0 0 14px}
+.card{background:#fff;border-radius:18px;padding:18px;margin:0 0 14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.row{display:grid;grid-template-columns:1fr 145px;align-items:center;gap:12px;padding:9px 0}
+input[type="date"],select{width:100%;font-size:17px;padding:10px 12px;border:1px solid #d6d6d8;border-radius:12px;background:#fff}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.seg input{display:none}.seg label{text-align:center;padding:11px 8px;border:1px solid #d6d6d8;border-radius:12px;background:#fff}
+.seg input:checked+label{background:#1f2937;color:#fff;border-color:#1f2937}.muted{color:#707070;font-size:13px;line-height:1.5}.weather{font-size:16px;line-height:1.7}.duration{font-weight:700}
+button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;font-weight:700}.primary{background:#111827;color:white;margin-top:6px}.secondary{background:#e9eaec;color:#111827;margin-top:10px}
+.danger{background:#fff0f0;color:#9b1c1c;width:auto;padding:8px 10px;font-size:13px}.entry{border-top:1px solid #ececef;padding:13px 0}.entry:first-child{border-top:0}.entry-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.entry-main{font-weight:700}.entry-sub{margin-top:5px;color:#5c5c60;font-size:14px;line-height:1.55}
+.hidden{display:none}.status{margin-top:10px;font-size:14px;min-height:20px;font-weight:700}.saved{background:#eef8ee;border:1px solid #cde8cd;border-radius:12px;padding:10px 12px}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.tabs button{background:#e9eaec;color:#111}.tabs button.active{background:#111827;color:white}
 </style>
 </head>
 <body>
 <h1>睡眠日記</h1>
-
 <div class="tabs">
-  <button id="tabInput" class="active" type="button">今日の記録</button>
-  <button id="tabHistory" type="button">これまでの記録</button>
+<button id="tabInput" class="active" type="button">今日の記録</button>
+<button id="tabHistory" type="button">これまでの記録</button>
 </div>
 
 <section id="inputView">
-  <div class="card">
-    <div class="row"><label for="date">日付</label><input id="date" type="date"></div>
-    <div class="row"><label for="sleepTime">寝た時間</label><select id="sleepTime"></select></div>
-    <div class="row"><label for="wakeTime">起きた時間</label><select id="wakeTime"></select></div>
-    <div class="row"><span>睡眠時間</span><span id="duration" class="duration">—</span></div>
-  </div>
+<div class="card">
+<div class="row"><label for="date">日付</label><input id="date" type="date"></div>
+<div class="row"><label for="sleepTime">寝た時間</label><select id="sleepTime"></select></div>
+<div class="row"><label for="wakeTime">起きた時間</label><select id="wakeTime"></select></div>
+<div class="row"><span>睡眠時間</span><span id="duration" class="duration">—</span></div>
+</div>
 
-  <div class="card">
-    <h2>途中で起きた</h2>
-    <div class="seg">
-      <input type="radio" name="midwake" id="midNo" value="なし" checked><label for="midNo">なし</label>
-      <input type="radio" name="midwake" id="midYes" value="あり"><label for="midYes">あり</label>
-    </div>
-  </div>
+<div class="card">
+<h2>途中で起きた</h2>
+<div class="seg">
+<input type="radio" name="midwake" id="midNo" value="なし" checked><label for="midNo">なし</label>
+<input type="radio" name="midwake" id="midYes" value="あり"><label for="midYes">あり</label>
+</div>
+<div id="midwakeDetail" class="hidden" style="margin-top:16px">
+<div class="row"><label for="midwakeTime">起きた時間</label><select id="midwakeTime"></select></div>
+<div class="row"><label for="resleepTime">再び寝た時間</label><select id="resleepTime"></select></div>
+</div>
+</div>
 
-  <div class="card">
-    <h2>頭痛</h2>
-    <div class="seg">
-      <input type="radio" name="headache" id="headNo" value="なし" checked><label for="headNo">なし</label>
-      <input type="radio" name="headache" id="headYes" value="あり"><label for="headYes">あり</label>
-    </div>
+<div class="card">
+<h2>頭痛</h2>
+<div class="seg">
+<input type="radio" name="headache" id="headNo" value="なし" checked><label for="headNo">なし</label>
+<input type="radio" name="headache" id="headYes" value="あり"><label for="headYes">あり</label>
+</div>
+<div id="medicineBlock" class="hidden" style="margin-top:16px">
+<h2>頭痛薬</h2>
+<div class="seg">
+<input type="radio" name="medicine" id="medNo" value="なし" checked><label for="medNo">なし</label>
+<input type="radio" name="medicine" id="medYes" value="あり"><label for="medYes">あり</label>
+</div>
+<div id="medicineTimeRow" class="row hidden" style="margin-top:6px">
+<label for="medicineTime">飲んだ時間</label><select id="medicineTime"></select>
+</div>
+</div>
+</div>
 
-    <div id="medicineBlock" class="hidden" style="margin-top:16px">
-      <h2>頭痛薬</h2>
-      <div class="seg">
-        <input type="radio" name="medicine" id="medNo" value="なし" checked><label for="medNo">なし</label>
-        <input type="radio" name="medicine" id="medYes" value="あり"><label for="medYes">あり</label>
-      </div>
-      <div id="medicineTimeRow" class="row hidden" style="margin-top:6px">
-        <label for="medicineTime">飲んだ時間</label><select id="medicineTime"></select>
-      </div>
-    </div>
-  </div>
+<div class="card">
+<h2>横浜市青葉区の天気</h2>
+<div id="weather" class="weather">天気を取得しています…</div>
+<div class="muted">天気・気温・気圧は自動取得し、記録時点の値を保存します。</div>
+</div>
 
-  <div class="card">
-    <h2>横浜市青葉区の天気</h2>
-    <div id="weather" class="weather">天気を取得しています…</div>
-    <div class="muted">天気・気温・気圧は自動取得し、記録時点の値を保存します。</div>
-  </div>
-
-  <button id="saveBtn" class="primary" type="button">記録する</button>
-  <div id="status" class="status"></div>
+<button id="saveBtn" class="primary" type="button">記録する</button>
+<div id="status" class="status"></div>
 </section>
 
 <section id="historyView" class="hidden">
-  <div class="card">
-    <h2>これまでの記録</h2>
-    <div id="entries"></div>
-    <button id="exportBtn" class="secondary" type="button">CSVを書き出す</button>
-  </div>
+<div class="card">
+<h2>これまでの記録</h2>
+<div id="entries"></div>
+<button id="exportBtn" class="secondary" type="button">CSVを書き出す</button>
+</div>
 </section>
 
 <script>
-const LAT=35.553, LON=139.537, STORAGE_KEY="sleepDiaryV1";
+const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV2",OLD_STORAGE_KEY="sleepDiaryV1";
+const $=id=>document.getElementById(id);
 
-function fillTimes(select, dh=0, dm=0){
-  for(let h=0;h<24;h++) for(let m=0;m<60;m+=10){
-    const hh=String(h).padStart(2,"0"), mm=String(m).padStart(2,"0");
-    const o=document.createElement("option"); o.value=`${hh}:${mm}`; o.textContent=`${h}:${mm}`;
-    if(h===dh&&m===dm) o.selected=true; select.appendChild(o);
+function fillTimes(select,orderStartHour=0,defaultValue="00:00"){
+  for(let i=0;i<24;i++){
+    const h=(orderStartHour+i)%24;
+    for(let m=0;m<60;m+=10){
+      const hh=String(h).padStart(2,"0"),mm=String(m).padStart(2,"0"),v=`${hh}:${mm}`;
+      const o=document.createElement("option");o.value=v;o.textContent=`${h}:${mm}`;if(v===defaultValue)o.selected=true;select.appendChild(o);
+    }
   }
 }
-fillTimes(sleepTime,0,0); fillTimes(wakeTime,8,0); fillTimes(medicineTime,10,0);
+fillTimes($("sleepTime"),23,"23:00");
+fillTimes($("wakeTime"),5,"08:00");
+fillTimes($("midwakeTime"),0,"03:00");
+fillTimes($("resleepTime"),0,"03:30");
+fillTimes($("medicineTime"),0,"10:00");
 
 const now=new Date();
-date.value=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+$("date").value=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
 
 function calcDuration(){
-  const s=sleepTime.value.split(":").map(Number), w=wakeTime.value.split(":").map(Number);
-  let a=s[0]*60+s[1], b=w[0]*60+w[1]; if(b<=a) b+=1440;
-  const mins=b-a; duration.textContent=`${Math.floor(mins/60)}時間${mins%60}分`; return mins;
+  const s=$("sleepTime").value.split(":").map(Number),w=$("wakeTime").value.split(":").map(Number);
+  let a=s[0]*60+s[1],b=w[0]*60+w[1];if(b<=a)b+=1440;
+  let mins=b-a;
+  if($("midYes").checked){
+    const mw=$("midwakeTime").value.split(":").map(Number),rs=$("resleepTime").value.split(":").map(Number);
+    let m1=mw[0]*60+mw[1],m2=rs[0]*60+rs[1];
+    if(m1<a)m1+=1440;if(m2<a)m2+=1440;if(m2<m1)m2+=1440;
+    mins=Math.max(0,mins-Math.max(0,m2-m1));
+  }
+  $("duration").textContent=`${Math.floor(mins/60)}時間${mins%60}分`;return mins;
 }
-sleepTime.onchange=calcDuration; wakeTime.onchange=calcDuration; calcDuration();
-
-document.querySelectorAll('input[name="headache"]').forEach(el=>el.onchange=()=>{
-  const yes=headYes.checked; medicineBlock.classList.toggle("hidden",!yes);
-  if(!yes){ medNo.checked=true; medicineTimeRow.classList.add("hidden"); }
-});
-document.querySelectorAll('input[name="medicine"]').forEach(el=>el.onchange=()=>{
-  medicineTimeRow.classList.toggle("hidden",!medYes.checked);
-});
+["sleepTime","wakeTime","midwakeTime","resleepTime"].forEach(id=>$(id).addEventListener("change",calcDuration));
+document.querySelectorAll('input[name="midwake"]').forEach(el=>el.addEventListener("change",()=>{$("midwakeDetail").classList.toggle("hidden",!$("midYes").checked);calcDuration();}));
+document.querySelectorAll('input[name="headache"]').forEach(el=>el.addEventListener("change",()=>{
+  const yes=$("headYes").checked;$("medicineBlock").classList.toggle("hidden",!yes);
+  if(!yes){$("medNo").checked=true;$("medicineTimeRow").classList.add("hidden");}
+}));
+document.querySelectorAll('input[name="medicine"]').forEach(el=>el.addEventListener("change",()=>{$("medicineTimeRow").classList.toggle("hidden",!$("medYes").checked);}));
+calcDuration();
 
 function weatherText(code){
-  if(code===0) return "晴れ";
-  if([1,2].includes(code)) return "晴れ時々くもり";
-  if(code===3) return "くもり";
-  if([45,48].includes(code)) return "霧";
-  if([51,53,55,56,57].includes(code)) return "霧雨";
-  if([61,63,65,66,67,80,81,82].includes(code)) return "雨";
-  if([71,73,75,77,85,86].includes(code)) return "雪";
-  if([95,96,99].includes(code)) return "雷雨";
-  return "不明";
+  if(code===0)return"晴れ";if([1,2].includes(code))return"晴れ時々くもり";if(code===3)return"くもり";if([45,48].includes(code))return"霧";
+  if([51,53,55,56,57].includes(code))return"霧雨";if([61,63,65,66,67,80,81,82].includes(code))return"雨";
+  if([71,73,75,77,85,86].includes(code))return"雪";if([95,96,99].includes(code))return"雷雨";return"不明";
 }
 async function fetchWeather(){
   const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-  const r=await fetch(url); if(!r.ok) throw new Error("weather");
-  const c=(await r.json()).current;
-  return {weather:weatherText(c.weather_code),temperature:c.temperature_2m,pressure:c.surface_pressure,weatherTime:c.time};
+  const r=await fetch(url);if(!r.ok)throw new Error("weather");const c=(await r.json()).current;
+  return{weather:weatherText(c.weather_code),temperature:c.temperature_2m,pressure:c.surface_pressure,weatherTime:c.time};
 }
 async function showWeather(){
-  weather.textContent="天気を取得しています…";
-  try{
-    const wx=await fetchWeather();
-    weather.textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
-  }catch(e){ weather.textContent="天気情報を取得できませんでした。"; }
+  $("weather").textContent="天気を取得しています…";
+  try{const wx=await fetchWeather();$("weather").textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;}
+  catch(e){$("weather").textContent="天気情報を取得できませんでした。";}
 }
 showWeather();
 
@@ -161,44 +148,81 @@ function getRadio(name){return document.querySelector(`input[name="${name}"]:che
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return[]}}
 function saveEntries(x){localStorage.setItem(STORAGE_KEY,JSON.stringify(x))}
 
-saveBtn.onclick=async()=>{
-  status.textContent="保存しています…";
-  let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:""};
-  try{ wx=await fetchWeather(); weather.textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`; }catch(e){}
-  const headache=getRadio("headache"), medicine=headache==="あり"?getRadio("medicine"):"なし";
-  const e={id:Date.now(),date:date.value,sleepTime:sleepTime.value,wakeTime:wakeTime.value,durationMinutes:calcDuration(),
-    midwake:getRadio("midwake"),headache,medicine,medicineTime:medicine==="あり"?medicineTime.value:"",...wx};
-  const entries=loadEntries(), i=entries.findIndex(x=>x.date===e.date);
-  if(i>=0) entries[i]=e; else entries.push(e);
-  entries.sort((a,b)=>b.date.localeCompare(a.date)); saveEntries(entries); renderEntries(); status.textContent="保存しました。";
-};
+function migrateOldData(){
+  const already = localStorage.getItem(STORAGE_KEY);
+  if(already) return;
 
-function fmt(m){return `${Math.floor(m/60)}時間${m%60}分`}
+  let oldEntries=[];
+  try{ oldEntries=JSON.parse(localStorage.getItem(OLD_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
+  if(!Array.isArray(oldEntries) || !oldEntries.length) return;
+
+  const migrated=oldEntries.map(e=>({
+    id:e.id || Date.now()+Math.floor(Math.random()*100000),
+    date:e.date || "",
+    sleepTime:e.sleepTime || "23:00",
+    wakeTime:e.wakeTime || "08:00",
+    durationMinutes:Number.isFinite(e.durationMinutes)?e.durationMinutes:0,
+    midwake:e.midwake || "なし",
+    midwakeTime:"",
+    resleepTime:"",
+    headache:e.headache || "なし",
+    medicine:e.medicine || "なし",
+    medicineTime:e.medicineTime || "",
+    weather:e.weather || "",
+    temperature:e.temperature ?? "",
+    pressure:e.pressure ?? "",
+    weatherTime:e.weatherTime || ""
+  }));
+  migrated.sort((a,b)=>b.date.localeCompare(a.date));
+  saveEntries(migrated);
+}
+migrateOldData();
+
+function resetAfterSave(){
+  $("sleepTime").value="23:00";$("wakeTime").value="08:00";
+  $("midNo").checked=true;$("midwakeDetail").classList.add("hidden");$("midwakeTime").value="03:00";$("resleepTime").value="03:30";
+  $("headNo").checked=true;$("medicineBlock").classList.add("hidden");$("medNo").checked=true;$("medicineTimeRow").classList.add("hidden");$("medicineTime").value="10:00";
+  calcDuration();
+}
+
+$("saveBtn").addEventListener("click",async()=>{
+  $("status").className="status";$("status").textContent="保存しています…";
+  let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:""};
+  try{wx=await fetchWeather();$("weather").textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;}catch(e){}
+  const headache=getRadio("headache"),medicine=headache==="あり"?getRadio("medicine"):"なし";
+  const entry={id:Date.now(),date:$("date").value,sleepTime:$("sleepTime").value,wakeTime:$("wakeTime").value,durationMinutes:calcDuration(),
+    midwake:getRadio("midwake"),midwakeTime:$("midYes").checked?$("midwakeTime").value:"",resleepTime:$("midYes").checked?$("resleepTime").value:"",
+    headache,medicine,medicineTime:medicine==="あり"?$("medicineTime").value:"",...wx};
+  const list=loadEntries(),i=list.findIndex(x=>x.date===entry.date);if(i>=0)list[i]=entry;else list.push(entry);
+  list.sort((a,b)=>b.date.localeCompare(a.date));saveEntries(list);renderEntries();
+  const savedDate=entry.date;resetAfterSave();$("status").className="status saved";$("status").textContent=`${savedDate} の記録を保存しました。入力欄をリセットしました。`;
+});
+
+function fmt(m){return`${Math.floor(m/60)}時間${m%60}分`}
 function renderEntries(){
-  const es=loadEntries(); entries.innerHTML="";
-  if(!es.length){entries.innerHTML='<div class="muted">まだ記録がありません。</div>'; return;}
+  const es=loadEntries();$("entries").innerHTML="";
+  if(!es.length){$("entries").innerHTML='<div class="muted">まだ記録がありません。</div>';return;}
   es.forEach(e=>{
-    const d=document.createElement("div"); d.className="entry";
+    const d=document.createElement("div");d.className="entry";
+    const mid=e.midwake==="あり"?` ／ 途中覚醒 ${e.midwakeTime||""}→${e.resleepTime||""}`:" ／ 途中覚醒なし";
     d.innerHTML=`<div class="entry-top"><div><div class="entry-main">${e.date}　${e.sleepTime} → ${e.wakeTime}　${fmt(e.durationMinutes)}</div>
-    <div class="entry-sub">途中覚醒: ${e.midwake} ／ 頭痛: ${e.headache}${e.medicine==="あり"?` ／ 頭痛薬: ${e.medicineTime}`:""}
+    <div class="entry-sub">${mid} ／ 頭痛: ${e.headache}${e.medicine==="あり"?` ／ 頭痛薬: ${e.medicineTime}`:""}
     <br>${e.weather||""}${e.temperature!==""?`　${e.temperature}℃`:""}${e.pressure!==""?`　${e.pressure} hPa`:""}</div></div>
-    <button class="danger" data-id="${e.id}">削除</button></div>`;
-    entries.appendChild(d);
+    <button class="danger" data-id="${e.id}">削除</button></div>`;$("entries").appendChild(d);
   });
-  document.querySelectorAll(".danger").forEach(b=>b.onclick=()=>{saveEntries(loadEntries().filter(e=>e.id!==Number(b.dataset.id)));renderEntries();});
+  document.querySelectorAll(".danger").forEach(b=>b.addEventListener("click",()=>{saveEntries(loadEntries().filter(e=>e.id!==Number(b.dataset.id)));renderEntries();}));
 }
 renderEntries();
 
-tabInput.onclick=()=>{inputView.classList.remove("hidden");historyView.classList.add("hidden");tabInput.classList.add("active");tabHistory.classList.remove("active")}
-tabHistory.onclick=()=>{historyView.classList.remove("hidden");inputView.classList.add("hidden");tabHistory.classList.add("active");tabInput.classList.remove("active");renderEntries()}
+$("tabInput").addEventListener("click",()=>{$("inputView").classList.remove("hidden");$("historyView").classList.add("hidden");$("tabInput").classList.add("active");$("tabHistory").classList.remove("active");});
+$("tabHistory").addEventListener("click",()=>{$("historyView").classList.remove("hidden");$("inputView").classList.add("hidden");$("tabHistory").classList.add("active");$("tabInput").classList.remove("active");renderEntries();});
 
-exportBtn.onclick=()=>{
-  const es=loadEntries(), head=["日付","寝た時間","起きた時間","睡眠時間(分)","途中覚醒","頭痛","頭痛薬","服用時刻","天気","気温(℃)","気圧(hPa)"];
-  const rows=es.map(e=>[e.date,e.sleepTime,e.wakeTime,e.durationMinutes,e.midwake,e.headache,e.medicine,e.medicineTime,e.weather,e.temperature,e.pressure]);
-  const q=v=>`"${String(v??"").replaceAll('"','""')}"`;
-  const csv="\uFEFF"+[head,...rows].map(r=>r.map(q).join(",")).join("\n");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); a.download="睡眠日記.csv"; a.click();
-};
+$("exportBtn").addEventListener("click",()=>{
+  const es=loadEntries(),head=["日付","寝た時間","起きた時間","睡眠時間(分)","途中覚醒","途中で起きた時間","再び寝た時間","頭痛","頭痛薬","服用時刻","天気","気温(℃)","気圧(hPa)"];
+  const rows=es.map(e=>[e.date,e.sleepTime,e.wakeTime,e.durationMinutes,e.midwake,e.midwakeTime||"",e.resleepTime||"",e.headache,e.medicine,e.medicineTime,e.weather,e.temperature,e.pressure]);
+  const q=v=>`"${String(v??"").replaceAll('"','""')}"`;const csv="\uFEFF"+[head,...rows].map(r=>r.map(q).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="睡眠日記.csv";a.click();
+});
 </script>
 </body>
 </html>
