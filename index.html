@@ -17,7 +17,7 @@ input[type="date"],select{width:100%;font-size:17px;padding:10px 12px;border:1px
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.seg input{display:none}.seg label{text-align:center;padding:11px 8px;border:1px solid #d6d6d8;border-radius:12px;background:#fff}
 .seg input:checked+label{background:#1f2937;color:#fff;border-color:#1f2937}.muted{color:#707070;font-size:13px;line-height:1.5}.weather{font-size:16px;line-height:1.7}.duration{font-weight:700}
 button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;font-weight:700}.primary{background:#111827;color:white;margin-top:6px}.secondary{background:#e9eaec;color:#111827;margin-top:10px}
-.danger{background:#fff0f0;color:#9b1c1c;width:auto;padding:8px 10px;font-size:13px}.entry{border-top:1px solid #ececef;padding:13px 0}.entry:first-child{border-top:0}.entry-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.entry-main{font-weight:700}.entry-sub{margin-top:5px;color:#5c5c60;font-size:14px;line-height:1.55}
+.danger{background:#fff0f0;color:#9b1c1c;width:auto;padding:8px 10px;font-size:13px}.editbtn{background:#eef2ff;color:#243b7a;width:auto;padding:8px 10px;font-size:13px}.entry-actions{display:flex;gap:6px}.entry{border-top:1px solid #ececef;padding:13px 0}.entry:first-child{border-top:0}.entry-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.entry-main{font-weight:700}.entry-sub{margin-top:5px;color:#5c5c60;font-size:14px;line-height:1.55}
 .hidden{display:none}.status{margin-top:10px;font-size:14px;min-height:20px;font-weight:700}.saved{background:#eef8ee;border:1px solid #cde8cd;border-radius:12px;padding:10px 12px}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.tabs button{background:#e9eaec;color:#111}.tabs button.active{background:#111827;color:white}
 </style>
 </head>
@@ -73,6 +73,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 </div>
 
 <button id="saveBtn" class="primary" type="button">記録する</button>
+<button id="cancelEditBtn" class="secondary hidden" type="button">編集をやめる</button>
 <div id="status" class="status"></div>
 </section>
 
@@ -299,6 +300,9 @@ function resetAfterSave(){
   $("sleepTime").value="23:00";$("wakeTime").value="08:00";
   $("midNo").checked=true;$("midwakeDetail").classList.add("hidden");$("midwakeTime").value="03:00";$("resleepTime").value="03:30";
   $("headNo").checked=true;$("medicineBlock").classList.add("hidden");$("medNo").checked=true;$("medicineTimeRow").classList.add("hidden");$("medicineTime").value="10:00";
+  editingId=null;
+  $("saveBtn").textContent="記録する";
+  $("cancelEditBtn").classList.add("hidden");
   calcDuration();
 }
 
@@ -328,7 +332,7 @@ $("saveBtn").addEventListener("click",async()=>{
   }
 
   const entry={
-    id:Date.now(),
+    id:editingId || Date.now(),
     date:selectedDate,
     sleepTime:selectedSleep,
     wakeTime:selectedWake,
@@ -343,8 +347,10 @@ $("saveBtn").addEventListener("click",async()=>{
   };
 
   const list=loadEntries();
-  const i=list.findIndex(x=>x.date===entry.date);
-  if(i>=0)list[i]=entry;else list.push(entry);
+  let i=-1;
+  if(editingId!==null) i=list.findIndex(x=>x.id===editingId);
+  if(i<0) i=list.findIndex(x=>x.date===entry.date);
+  if(i>=0) list[i]=entry; else list.push(entry);
   list.sort((a,b)=>b.date.localeCompare(a.date));
   saveEntries(list);
   renderEntries();
@@ -364,11 +370,51 @@ function renderEntries(){
     d.innerHTML=`<div class="entry-top"><div><div class="entry-main">${e.date}　${e.sleepTime} → ${e.wakeTime}　${fmt(e.durationMinutes)}</div>
     <div class="entry-sub">${mid} ／ 頭痛: ${e.headache}${e.medicine==="あり"?` ／ 頭痛薬: ${e.medicineTime}`:""}
     <br>${e.weather||""}${e.temperature!==""?`　${e.temperature}℃`:""}${e.pressure!==""?`　${e.pressure} hPa`:""}${e.weatherTime?`<br>天気データ時刻: ${e.weatherTime}`:""}</div></div>
-    <button class="danger" data-id="${e.id}">削除</button></div>`;$("entries").appendChild(d);
+    <div class="entry-actions"><button class="editbtn" data-id="${e.id}">編集</button><button class="danger" data-id="${e.id}">削除</button></div></div>`;$("entries").appendChild(d);
   });
+  document.querySelectorAll(".editbtn").forEach(b=>b.addEventListener("click",()=>{
+    const id=Number(b.dataset.id);
+    const e=loadEntries().find(x=>x.id===id);
+    if(!e) return;
+    editingId=id;
+    $("date").value=e.date||todayISO();
+    $("sleepTime").value=e.sleepTime||"23:00";
+    $("wakeTime").value=e.wakeTime||"08:00";
+    if(e.midwake==="あり"){
+      $("midYes").checked=true;$("midwakeDetail").classList.remove("hidden");
+      $("midwakeTime").value=e.midwakeTime||"03:00";$("resleepTime").value=e.resleepTime||"03:30";
+    }else{
+      $("midNo").checked=true;$("midwakeDetail").classList.add("hidden");
+    }
+    if(e.headache==="あり"){
+      $("headYes").checked=true;$("medicineBlock").classList.remove("hidden");
+      if(e.medicine==="あり"){
+        $("medYes").checked=true;$("medicineTimeRow").classList.remove("hidden");$("medicineTime").value=e.medicineTime||"10:00";
+      }else{
+        $("medNo").checked=true;$("medicineTimeRow").classList.add("hidden");
+      }
+    }else{
+      $("headNo").checked=true;$("medicineBlock").classList.add("hidden");$("medNo").checked=true;$("medicineTimeRow").classList.add("hidden");
+    }
+    $("saveBtn").textContent="変更を保存";
+    $("cancelEditBtn").classList.remove("hidden");
+    $("status").className="status";
+    $("status").textContent=`${e.date} の記録を編集中です。`;
+    calcDuration();showWeather();
+    $("historyView").classList.add("hidden");$("inputView").classList.remove("hidden");
+    $("tabHistory").classList.remove("active");$("tabInput").classList.add("active");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }));
   document.querySelectorAll(".danger").forEach(b=>b.addEventListener("click",()=>{saveEntries(loadEntries().filter(e=>e.id!==Number(b.dataset.id)));renderEntries();}));
 }
 renderEntries();
+
+$("cancelEditBtn").addEventListener("click",()=>{
+  resetAfterSave();
+  $("status").className="status";
+  $("status").textContent="編集を中止しました。";
+  showWeather();
+});
 
 $("tabInput").addEventListener("click",()=>{$("inputView").classList.remove("hidden");$("historyView").classList.add("hidden");$("tabInput").classList.add("active");$("tabHistory").classList.remove("active");});
 $("tabHistory").addEventListener("click",()=>{$("historyView").classList.remove("hidden");$("inputView").classList.add("hidden");$("tabHistory").classList.add("active");$("tabInput").classList.remove("active");renderEntries();});
