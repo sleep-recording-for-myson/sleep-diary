@@ -85,7 +85,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 </section>
 
 <script>
-const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV22",OLD_STORAGE_KEY="sleepDiaryV21",OLDER_STORAGE_KEY="sleepDiaryV2",OLDEST_STORAGE_KEY="sleepDiaryV1";
+const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV23",OLD_STORAGE_KEY="sleepDiaryV22",OLDER_STORAGE_KEY="sleepDiaryV21",OLDEST_STORAGE_KEY="sleepDiaryV2",LEGACY_STORAGE_KEY="sleepDiaryV1";
 const $=id=>document.getElementById(id);
 
 function fillTimes(select,orderStartHour=0,defaultValue="00:00"){
@@ -174,10 +174,27 @@ async function fetchWeatherForEntry(targetDate, wakeValue){
     };
   }
 
-  const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-  const r=await fetch(url);
-  if(!r.ok) throw new Error("historical-weather");
-  const data=await r.json();
+  // 過去日はまず Historical Forecast API を使用。
+  // 直近の過去日にも対応しやすく、実際の天候に近い時系列を取得できる。
+  let data=null;
+  const histForecastUrl=`https://historical-forecast-api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+
+  try{
+    const r1=await fetch(histForecastUrl);
+    if(r1.ok){
+      const d1=await r1.json();
+      if(d1.hourly?.time?.length) data=d1;
+    }
+  }catch(e){}
+
+  // Historical Forecastで取れない古い日付はArchive APIへフォールバック
+  if(!data){
+    const archiveUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+    const r2=await fetch(archiveUrl);
+    if(!r2.ok) throw new Error("historical-weather");
+    data=await r2.json();
+  }
+
   const times=data.hourly?.time || [];
   if(!times.length) throw new Error("historical-weather-empty");
 
@@ -197,7 +214,7 @@ async function fetchWeatherForEntry(targetDate, wakeValue){
     temperature:data.hourly.temperature_2m[bestIndex],
     pressure:data.hourly.surface_pressure[bestIndex],
     weatherTime:times[bestIndex],
-    weatherSource:"過去"
+    weatherSource:"過去（起床時刻付近）"
   };
 }
 
@@ -205,7 +222,7 @@ async function showWeather(){
   $("weather").textContent="天気を取得しています…";
   try{
     const wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
-    const prefix=wx.weatherSource==="過去" ? "過去天気" : "現在";
+    const prefix=wx.weatherSource.startsWith("過去") ? "過去天気" : "現在";
     $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
   }catch(e){
     $("weather").textContent="天気情報を取得できませんでした。";
@@ -230,6 +247,9 @@ function migrateOldData(){
   }
   if(!Array.isArray(oldEntries) || !oldEntries.length){
     try{ oldEntries=JSON.parse(localStorage.getItem(OLDEST_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
+  }
+  if(!Array.isArray(oldEntries) || !oldEntries.length){
+    try{ oldEntries=JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
   }
   if(!Array.isArray(oldEntries) || !oldEntries.length) return;
 
@@ -267,7 +287,7 @@ $("saveBtn").addEventListener("click",async()=>{
   let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:"",weatherSource:""};
   try{
     wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
-    const prefix=wx.weatherSource==="過去" ? "過去天気" : "現在";
+    const prefix=wx.weatherSource.startsWith("過去") ? "過去天気" : "現在";
     $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
   }catch(e){}
   const headache=getRadio("headache"),medicine=headache==="あり"?getRadio("medicine"):"なし";
