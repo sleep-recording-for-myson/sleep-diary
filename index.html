@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f7f8">
+<title>睡眠日記</title>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; color:#171717; background:#f6f6f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; max-width:680px; margin-inline:auto; }
+  h1 { font-size:28px; margin:8px 0 18px; }
+  h2 { font-size:18px; margin:0 0 14px; }
+  .card { background:#fff; border-radius:18px; padding:18px; margin:0 0 14px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .row { display:grid; grid-template-columns:1fr 145px; align-items:center; gap:12px; padding:9px 0; }
+  label { font-size:16px; }
+  input[type="date"], select { width:100%; font-size:17px; padding:10px 12px; border:1px solid #d6d6d8; border-radius:12px; background:#fff; }
+  .seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .seg input { display:none; }
+  .seg label { text-align:center; padding:11px 8px; border:1px solid #d6d6d8; border-radius:12px; cursor:pointer; background:#fff; }
+  .seg input:checked + label { background:#1f2937; color:#fff; border-color:#1f2937; }
+  .muted { color:#707070; font-size:13px; line-height:1.5; }
+  .weather { font-size:16px; line-height:1.7; }
+  .duration { font-weight:700; }
+  button { width:100%; border:0; border-radius:14px; padding:14px 16px; font-size:17px; font-weight:700; cursor:pointer; }
+  .primary { background:#111827; color:white; margin-top:6px; }
+  .secondary { background:#e9eaec; color:#111827; margin-top:10px; }
+  .danger { background:#fff0f0; color:#9b1c1c; width:auto; padding:8px 10px; font-size:13px; }
+  .entry { border-top:1px solid #ececef; padding:13px 0; }
+  .entry:first-child { border-top:0; }
+  .entry-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .entry-main { font-weight:700; }
+  .entry-sub { margin-top:5px; color:#5c5c60; font-size:14px; line-height:1.55; }
+  .hidden { display:none; }
+  .status { margin-top:10px; font-size:14px; min-height:20px; }
+  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .tabs button { background:#e9eaec; color:#111; }
+  .tabs button.active { background:#111827; color:white; }
+  footer { padding:8px 4px 28px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>睡眠日記</h1>
+
+<div class="tabs">
+  <button id="tabInput" class="active" type="button">今日の記録</button>
+  <button id="tabHistory" type="button">これまでの記録</button>
+</div>
+
+<section id="inputView">
+  <div class="card">
+    <div class="row">
+      <label for="date">日付</label>
+      <input id="date" type="date">
+    </div>
+    <div class="row">
+      <label for="sleepTime">寝た時間</label>
+      <select id="sleepTime"></select>
+    </div>
+    <div class="row">
+      <label for="wakeTime">起きた時間</label>
+      <select id="wakeTime"></select>
+    </div>
+    <div class="row">
+      <span>睡眠時間</span>
+      <span id="duration" class="duration">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>途中で起きた</h2>
+    <div class="seg">
+      <input type="radio" name="midwake" id="midNo" value="なし" checked>
+      <label for="midNo">なし</label>
+      <input type="radio" name="midwake" id="midYes" value="あり">
+      <label for="midYes">あり</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>頭痛</h2>
+    <div class="seg">
+      <input type="radio" name="headache" id="headNo" value="なし" checked>
+      <label for="headNo">なし</label>
+      <input type="radio" name="headache" id="headYes" value="あり">
+      <label for="headYes">あり</label>
+    </div>
+
+    <div id="medicineBlock" class="hidden" style="margin-top:16px">
+      <h2>頭痛薬</h2>
+      <div class="seg">
+        <input type="radio" name="medicine" id="medNo" value="なし" checked>
+        <label for="medNo">なし</label>
+        <input type="radio" name="medicine" id="medYes" value="あり">
+        <label for="medYes">あり</label>
+      </div>
+      <div id="medicineTimeRow" class="row hidden" style="margin-top:6px">
+        <label for="medicineTime">飲んだ時間</label>
+        <select id="medicineTime"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>横浜市青葉区の天気</h2>
+    <div id="weather" class="weather">取得前です。記録時に自動取得します。</div>
+    <div class="muted">天気・気温・気圧は記録ボタンを押した時点の値を保存します。</div>
+  </div>
+
+  <button id="saveBtn" class="primary" type="button">記録する</button>
+  <div id="status" class="status"></div>
+</section>
+
+<section id="historyView" class="hidden">
+  <div class="card">
+    <h2>これまでの記録</h2>
+    <div id="entries"></div>
+    <button id="exportBtn" class="secondary" type="button">CSVを書き出す</button>
+  </div>
+</section>
+
+<footer class="muted">
+  天気データ: Open-Meteo（CC BY 4.0）
+</footer>
+
+<script>
+const LAT = 35.553;   // 横浜市青葉区付近
+const LON = 139.537;
+const STORAGE_KEY = "sleepDiaryV1";
+
+function fillTimes(select, defaultHour=0, defaultMinute=0) {
+  for (let h=0; h<24; h++) {
+    for (let m=0; m<60; m+=10) {
+      const hh = String(h).padStart(2,"0");
+      const mm = String(m).padStart(2,"0");
+      const opt = document.createElement("option");
+      opt.value = `${hh}:${mm}`;
+      opt.textContent = `${h}:${mm}`;
+      if (h===defaultHour && m===defaultMinute) opt.selected = true;
+      select.appendChild(opt);
+    }
+  }
+}
+fillTimes(document.getElementById("sleepTime"), 0, 0);
+fillTimes(document.getElementById("wakeTime"), 8, 0);
+fillTimes(document.getElementById("medicineTime"), 10, 0);
+
+const today = new Date();
+const localToday = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+document.getElementById("date").value = localToday;
+
+function calcDuration() {
+  const s = document.getElementById("sleepTime").value.split(":").map(Number);
+  const w = document.getElementById("wakeTime").value.split(":").map(Number);
+  let start = s[0]*60+s[1];
+  let end = w[0]*60+w[1];
+  if (end <= start) end += 24*60;
+  const mins = end-start;
+  document.getElementById("duration").textContent = `${Math.floor(mins/60)}時間${mins%60}分`;
+  return mins;
+}
+document.getElementById("sleepTime").addEventListener("change", calcDuration);
+document.getElementById("wakeTime").addEventListener("change", calcDuration);
+calcDuration();
+
+document.querySelectorAll('input[name="headache"]').forEach(el => el.addEventListener("change", () => {
+  const yes = document.getElementById("headYes").checked;
+  document.getElementById("medicineBlock").classList.toggle("hidden", !yes);
+  if (!yes) {
+    document.getElementById("medNo").checked = true;
+    document.getElementById("medicineTimeRow").classList.add("hidden");
+  }
+}));
+document.querySelectorAll('input[name="medicine"]').forEach(el => el.addEventListener("change", () => {
+  document.getElementById("medicineTimeRow").classList.toggle("hidden", !document.getElementById("medYes").checked);
+}));
+
+function weatherText(code) {
+  if (code === 0) return "晴れ";
+  if ([1,2].includes(code)) return "晴れ時々くもり";
+  if (code === 3) return "くもり";
+  if ([45,48].includes(code)) return "霧";
+  if ([51,53,55,56,57].includes(code)) return "霧雨";
+  if ([61,63,65,66,67,80,81,82].includes(code)) return "雨";
+  if ([71,73,75,77,85,86].includes(code)) return "雪";
+  if ([95,96,99].includes(code)) return "雷雨";
+  return "不明";
+}
+
+async function fetchWeather() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("weather");
+  const data = await res.json();
+  const c = data.current;
+  return {
+    weather: weatherText(c.weather_code),
+    temperature: c.temperature_2m,
+    pressure: c.surface_pressure,
+    weatherCode: c.weather_code,
+    weatherTime: c.time
+  };
+}
+
+function getRadio(name) {
+  return document.querySelector(`input[name="${name}"]:checked`).value;
+}
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveEntries(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  const status = document.getElementById("status");
+  status.textContent = "天気を取得しています…";
+  let wx = {weather:"取得できず", temperature:"", pressure:"", weatherCode:"", weatherTime:""};
+  try {
+    wx = await fetchWeather();
+    document.getElementById("weather").textContent =
+      `${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
+  } catch(e) {
+    document.getElementById("weather").textContent = "天気情報を取得できませんでした。";
+  }
+
+  const headache = getRadio("headache");
+  const medicine = headache === "あり" ? getRadio("medicine") : "なし";
+  const entry = {
+    id: Date.now(),
+    date: document.getElementById("date").value,
+    sleepTime: document.getElementById("sleepTime").value,
+    wakeTime: document.getElementById("wakeTime").value,
+    durationMinutes: calcDuration(),
+    midwake: getRadio("midwake"),
+    headache,
+    medicine,
+    medicineTime: medicine === "あり" ? document.getElementById("medicineTime").value : "",
+    ...wx
+  };
+
+  const entries = loadEntries();
+  const sameIndex = entries.findIndex(x => x.date === entry.date);
+  if (sameIndex >= 0) entries[sameIndex] = entry;
+  else entries.push(entry);
+  entries.sort((a,b) => b.date.localeCompare(a.date));
+  saveEntries(entries);
+  status.textContent = "保存しました。";
+  renderEntries();
+});
+
+function formatDuration(mins) {
+  return `${Math.floor(mins/60)}時間${mins%60}分`;
+}
+function renderEntries() {
+  const box = document.getElementById("entries");
+  const entries = loadEntries();
+  if (!entries.length) {
+    box.innerHTML = '<div class="muted">まだ記録がありません。</div>';
+    return;
+  }
+  box.innerHTML = "";
+  entries.forEach(e => {
+    const div = document.createElement("div");
+    div.className = "entry";
+    div.innerHTML = `
+      <div class="entry-top">
+        <div>
+          <div class="entry-main">${e.date}　${e.sleepTime} → ${e.wakeTime}　${formatDuration(e.durationMinutes)}</div>
+          <div class="entry-sub">
+            途中覚醒: ${e.midwake} ／ 頭痛: ${e.headache}
+            ${e.medicine === "あり" ? ` ／ 頭痛薬: ${e.medicineTime}` : ""}
+            <br>${e.weather || "天気なし"}${e.temperature !== "" ? `　${e.temperature}℃` : ""}${e.pressure !== "" ? `　${e.pressure} hPa` : ""}
+          </div>
+        </div>
+        <button class="danger" data-id="${e.id}">削除</button>
+      </div>`;
+    box.appendChild(div);
+  });
+  box.querySelectorAll(".danger").forEach(btn => btn.addEventListener("click", () => {
+    const id = Number(btn.dataset.id);
+    saveEntries(loadEntries().filter(e => e.id !== id));
+    renderEntries();
+  }));
+}
+renderEntries();
+
+document.getElementById("tabInput").addEventListener("click", () => {
+  document.getElementById("inputView").classList.remove("hidden");
+  document.getElementById("historyView").classList.add("hidden");
+  document.getElementById("tabInput").classList.add("active");
+  document.getElementById("tabHistory").classList.remove("active");
+});
+document.getElementById("tabHistory").addEventListener("click", () => {
+  document.getElementById("historyView").classList.remove("hidden");
+  document.getElementById("inputView").classList.add("hidden");
+  document.getElementById("tabHistory").classList.add("active");
+  document.getElementById("tabInput").classList.remove("active");
+  renderEntries();
+});
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const entries = loadEntries();
+  const header = ["日付","寝た時間","起きた時間","睡眠時間(分)","途中覚醒","頭痛","頭痛薬","服用時刻","天気","気温(℃)","気圧(hPa)"];
+  const rows = entries.map(e => [
+    e.date,e.sleepTime,e.wakeTime,e.durationMinutes,e.midwake,e.headache,e.medicine,e.medicineTime,e.weather,e.temperature,e.pressure
+  ]);
+  const esc = v => `"${String(v ?? "").replaceAll('"','""')}"`;
+  const csv = "\uFEFF" + [header, ...rows].map(r => r.map(esc).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "睡眠日記.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>
