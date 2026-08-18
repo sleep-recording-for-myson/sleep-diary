@@ -159,50 +159,18 @@ function todayISO(){
   return new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
 
-async function fetchWeatherForEntry(targetDate, wakeValue){
-  const today=todayISO();
+async function fetchJson(url){
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  return await r.json();
+}
 
-  // 今日
-  if(targetDate===today){
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-    const r=await fetch(url);
-    if(!r.ok) throw new Error("weather-current");
-    const c=(await r.json()).current;
-    return{
-      weather:weatherText(c.weather_code),
-      temperature:c.temperature_2m,
-      pressure:c.surface_pressure,
-      weatherTime:c.time,
-      weatherSource:"現在"
-    };
-  }
-
-  const target=new Date(targetDate+"T00:00:00");
-  const nowDate=new Date(today+"T00:00:00");
-  const daysAgo=Math.round((nowDate-target)/86400000);
-
-  let data=null;
-
-  // 直近10日以内は通常のForecast APIのpast_daysを使用
-  if(daysAgo>=1 && daysAgo<=10){
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&past_days=10&forecast_days=1&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-    const r=await fetch(url);
-    if(!r.ok) throw new Error("weather-recent-past");
-    data=await r.json();
-  } else {
-    // 11日以上前はHistorical Weather API
-    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-    const r=await fetch(url);
-    if(!r.ok) throw new Error("weather-archive");
-    data=await r.json();
-  }
-
+function pickNearestHourly(data,targetDate,wakeValue){
   const times=data.hourly?.time || [];
-  if(!times.length) throw new Error("weather-no-data");
+  if(!times.length) throw new Error("時間別データなし");
 
   const [wh,wm]=wakeValue.split(":").map(Number);
   const targetMinutes=wh*60+wm;
-
   let bestIndex=-1,bestDiff=Infinity;
 
   times.forEach((t,i)=>{
@@ -210,13 +178,10 @@ async function fetchWeatherForEntry(targetDate, wakeValue){
     const [hh,mm]=t.slice(11,16).split(":").map(Number);
     const mins=hh*60+mm;
     const diff=Math.abs(mins-targetMinutes);
-    if(diff<bestDiff){
-      bestDiff=diff;
-      bestIndex=i;
-    }
+    if(diff<bestDiff){bestDiff=diff;bestIndex=i;}
   });
 
-  if(bestIndex<0) throw new Error("weather-target-date-missing");
+  if(bestIndex<0) throw new Error("指定日のデータなし");
 
   return{
     weather:weatherText(data.hourly.weather_code[bestIndex]),
@@ -227,6 +192,49 @@ async function fetchWeatherForEntry(targetDate, wakeValue){
   };
 }
 
+async function fetchWeatherForEntry(targetDate,wakeValue){
+  const today=todayISO();
+
+  if(targetDate===today){
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+    const data=await fetchJson(url);
+    const c=data.current;
+    return{
+      weather:weatherText(c.weather_code),
+      temperature:c.temperature_2m,
+      pressure:c.surface_pressure,
+      weatherTime:c.time,
+      weatherSource:"現在"
+    };
+  }
+
+  const target=new Date(targetDate+"T00:00:00");
+  const todayDate=new Date(today+"T00:00:00");
+  const daysAgo=Math.round((todayDate-target)/86400000);
+
+  if(daysAgo<0) throw new Error("未来の日付です");
+
+  const params=`latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+
+  // 1. 直近日は通常Forecast APIに日付を直接指定
+  if(daysAgo<=10){
+    try{
+      const data=await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`);
+      return pickNearestHourly(data,targetDate,wakeValue);
+    }catch(e){}
+  }
+
+  // 2. Historical Forecast API
+  try{
+    const data=await fetchJson(`https://historical-forecast-api.open-meteo.com/v1/forecast?${params}`);
+    return pickNearestHourly(data,targetDate,wakeValue);
+  }catch(e){}
+
+  // 3. Historical Weather API
+  const data=await fetchJson(`https://archive-api.open-meteo.com/v1/archive?${params}`);
+  return pickNearestHourly(data,targetDate,wakeValue);
+}
+
 async function showWeather(){
   $("weather").textContent="天気を取得しています…";
   try{
@@ -234,7 +242,7 @@ async function showWeather(){
     const prefix=wx.weatherSource.startsWith("過去") ? "過去天気" : "現在";
     $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
   }catch(e){
-    $("weather").textContent="天気情報を取得できませんでした。";
+    $("weather").textContent=`天気情報を取得できませんでした（${e.message}）`;
   }
 }
 showWeather();
@@ -301,7 +309,9 @@ $("saveBtn").addEventListener("click",async()=>{
     wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
     const prefix=wx.weatherSource.startsWith("過去") ? "過去天気" : "現在";
     $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
-  }catch(e){}
+  }catch(e){
+    $("weather").textContent=`天気情報を取得できませんでした（${e.message}）`;
+  }
   const headache=getRadio("headache"),medicine=headache==="あり"?getRadio("medicine"):"なし";
   const entry={id:Date.now(),date:$("date").value,sleepTime:$("sleepTime").value,wakeTime:$("wakeTime").value,durationMinutes:calcDuration(),
     midwake:getRadio("midwake"),midwakeTime:$("midYes").checked?$("midwakeTime").value:"",resleepTime:$("midYes").checked?$("resleepTime").value:"",
