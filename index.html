@@ -69,7 +69,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 <div class="card">
 <h2>横浜市青葉区の天気</h2>
 <div id="weather" class="weather">天気を取得しています…</div>
-<div class="muted">天気・気温・気圧は自動取得し、記録時点の値を保存します。</div>
+<div class="muted">今日の日付では現在の天気を、過去の日付では起床時刻に最も近い過去の天気・気温・気圧を自動取得します。</div>
 </div>
 
 <button id="saveBtn" class="primary" type="button">記録する</button>
@@ -85,7 +85,7 @@ button{width:100%;border:0;border-radius:14px;padding:14px 16px;font-size:17px;f
 </section>
 
 <script>
-const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV21",OLD_STORAGE_KEY="sleepDiaryV2",OLDER_STORAGE_KEY="sleepDiaryV1";
+const LAT=35.553,LON=139.537,STORAGE_KEY="sleepDiaryV22",OLD_STORAGE_KEY="sleepDiaryV21",OLDER_STORAGE_KEY="sleepDiaryV2",OLDEST_STORAGE_KEY="sleepDiaryV1";
 const $=id=>document.getElementById(id);
 
 function fillTimes(select,orderStartHour=0,defaultValue="00:00"){
@@ -154,17 +154,66 @@ function weatherText(code){
   if([51,53,55,56,57].includes(code))return"霧雨";if([61,63,65,66,67,80,81,82].includes(code))return"雨";
   if([71,73,75,77,85,86].includes(code))return"雪";if([95,96,99].includes(code))return"雷雨";return"不明";
 }
-async function fetchWeather(){
-  const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
-  const r=await fetch(url);if(!r.ok)throw new Error("weather");const c=(await r.json()).current;
-  return{weather:weatherText(c.weather_code),temperature:c.temperature_2m,pressure:c.surface_pressure,weatherTime:c.time};
+function todayISO(){
+  const n=new Date();
+  return new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
+
+async function fetchWeatherForEntry(targetDate, wakeValue){
+  if(targetDate===todayISO()){
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+    const r=await fetch(url);
+    if(!r.ok) throw new Error("weather");
+    const c=(await r.json()).current;
+    return {
+      weather:weatherText(c.weather_code),
+      temperature:c.temperature_2m,
+      pressure:c.surface_pressure,
+      weatherTime:c.time,
+      weatherSource:"現在"
+    };
+  }
+
+  const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&start_date=${targetDate}&end_date=${targetDate}&hourly=temperature_2m,surface_pressure,weather_code&timezone=Asia%2FTokyo`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error("historical-weather");
+  const data=await r.json();
+  const times=data.hourly?.time || [];
+  if(!times.length) throw new Error("historical-weather-empty");
+
+  const [wh,wm]=wakeValue.split(":").map(Number);
+  const targetMinutes=wh*60+wm;
+  let bestIndex=0, bestDiff=Infinity;
+
+  times.forEach((t,i)=>{
+    const hhmm=t.slice(11,16).split(":").map(Number);
+    const mins=hhmm[0]*60+hhmm[1];
+    const diff=Math.abs(mins-targetMinutes);
+    if(diff<bestDiff){bestDiff=diff;bestIndex=i;}
+  });
+
+  return {
+    weather:weatherText(data.hourly.weather_code[bestIndex]),
+    temperature:data.hourly.temperature_2m[bestIndex],
+    pressure:data.hourly.surface_pressure[bestIndex],
+    weatherTime:times[bestIndex],
+    weatherSource:"過去"
+  };
+}
+
 async function showWeather(){
   $("weather").textContent="天気を取得しています…";
-  try{const wx=await fetchWeather();$("weather").textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;}
-  catch(e){$("weather").textContent="天気情報を取得できませんでした。";}
+  try{
+    const wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
+    const prefix=wx.weatherSource==="過去" ? "過去天気" : "現在";
+    $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
+  }catch(e){
+    $("weather").textContent="天気情報を取得できませんでした。";
+  }
 }
 showWeather();
+$("date").addEventListener("change",showWeather);
+$("wakeTime").addEventListener("change",showWeather);
 
 function getRadio(name){return document.querySelector(`input[name="${name}"]:checked`).value;}
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return[]}}
@@ -178,6 +227,9 @@ function migrateOldData(){
   try{ oldEntries=JSON.parse(localStorage.getItem(OLD_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
   if(!Array.isArray(oldEntries) || !oldEntries.length){
     try{ oldEntries=JSON.parse(localStorage.getItem(OLDER_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
+  }
+  if(!Array.isArray(oldEntries) || !oldEntries.length){
+    try{ oldEntries=JSON.parse(localStorage.getItem(OLDEST_STORAGE_KEY)||"[]"); }catch{ oldEntries=[]; }
   }
   if(!Array.isArray(oldEntries) || !oldEntries.length) return;
 
@@ -212,8 +264,12 @@ function resetAfterSave(){
 
 $("saveBtn").addEventListener("click",async()=>{
   $("status").className="status";$("status").textContent="保存しています…";
-  let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:""};
-  try{wx=await fetchWeather();$("weather").textContent=`${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;}catch(e){}
+  let wx={weather:"取得できず",temperature:"",pressure:"",weatherTime:"",weatherSource:""};
+  try{
+    wx=await fetchWeatherForEntry($("date").value,$("wakeTime").value);
+    const prefix=wx.weatherSource==="過去" ? "過去天気" : "現在";
+    $("weather").textContent=`${prefix}：${wx.weather}　${wx.temperature}℃　気圧 ${wx.pressure} hPa`;
+  }catch(e){}
   const headache=getRadio("headache"),medicine=headache==="あり"?getRadio("medicine"):"なし";
   const entry={id:Date.now(),date:$("date").value,sleepTime:$("sleepTime").value,wakeTime:$("wakeTime").value,durationMinutes:calcDuration(),
     midwake:getRadio("midwake"),midwakeTime:$("midYes").checked?$("midwakeTime").value:"",resleepTime:$("midYes").checked?$("resleepTime").value:"",
